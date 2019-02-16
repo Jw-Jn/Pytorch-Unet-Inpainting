@@ -1,18 +1,17 @@
 import torch
 import numpy as np
-from optparse import OptionParser
-import os
 import torchvision.models as models
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
-from torch.autograd import Variable
 import matplotlib.pyplot as plt
+from torch.autograd import Variable
+from optparse import OptionParser
 from model import UNet
+import os
 import dataset
 import random
 
-def trainNet(net, data_dir, epochs=100, gpu=True, train=True, pth_dir=None):
-
-    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=True, pth=None):
 
     criterion = torch.nn.MSELoss()
     if gpu:
@@ -43,6 +42,7 @@ def trainNet(net, data_dir, epochs=100, gpu=True, train=True, pth_dir=None):
 
                 if gpu:
                     img_input = Variable(img_input.cuda())
+                    img = Variable(img.cuda())
 
                 out = net.forward(img_input)
 
@@ -55,13 +55,13 @@ def trainNet(net, data_dir, epochs=100, gpu=True, train=True, pth_dir=None):
 
                 print('Training sample %d / %d - Loss: %.6f' % (i+1, 100, loss.item()))
                 
-            print('Epoch %d finished! - Loss: %.6f' % (epoch+1, epoch_loss / i))
+            print('Epoch %d finished! - Loss: %.6f' % (epoch+1, epoch_loss / (i+1)))
 
             idx = random.randint(0, 15) # batch size -1
-            showSample(img[idx], mask[idx], torch.transpose(out, 1, 3)[idx], (epoch+1), train=True)
+            showSample(img[idx], mask[idx], torch.transpose(out, 1, 3)[idx], (epoch+1), sample_dir, train=True)
 
             if (epoch+1)%10 == 0:
-                torch.save(net.state_dict(), os.path.join(data_dir, 'checkpoints') + '/CP%d.pth' % (epoch + 1))
+                torch.save(net.state_dict(), os.path.join(cpt_dir, 'CP%d.pth' % (epoch + 1)))
                 print('Checkpoint %d saved !' % (epoch + 1))
 
     else:
@@ -73,7 +73,7 @@ def trainNet(net, data_dir, epochs=100, gpu=True, train=True, pth_dir=None):
         print('test items:', len(test_dataset))
 
         print('Testing')
-        net.load_state_dict(torch.load(pth_dir))
+        net.load_state_dict(torch.load(os.path.join(cpt_dir, pth)))
         net.eval()
 
         with torch.no_grad():
@@ -87,25 +87,24 @@ def trainNet(net, data_dir, epochs=100, gpu=True, train=True, pth_dir=None):
 
                 out = net.forward(img_input)
 
-                showSample(img[0], mask[0], torch.transpose(out, 1, 3)[0], i, train=False)
+                showSample(img[0], mask[0], torch.transpose(out, 1, 3)[0], i, sample_dir, train=False)
 
 
 def getArgs():
     parser = OptionParser()
-    parser.add_option('-e', '--epochs', dest='epochs', default=100, type='int', help='number of epochs')
-    parser.add_option('-d', '--data-dir', dest='data_dir', default='./inpainting_set', help='data directory')
-    parser.add_option('-g', '--gpu', action='store_true', dest='gpu', default=False, help='use cuda')
+    parser.add_option('--epochs', dest='epochs', default=100, type='int', help='number of epochs')
+    parser.add_option('--data-dir', dest='data_dir', default='./inpainting_set', help='data directory')
+    parser.add_option('--sample-dir', dest='sample_dir', default='./samples', help='sample directory')
+    parser.add_option('--cpt-dir', dest='cpt_dir', default='./checkpoints', help='checkpoint directory')
+    parser.add_option('--gpu', action='store_true', dest='gpu', default=True, help='use cuda')
     parser.add_option('--test', action='store_false', default=True, help='testing mode')
-    parser.add_option('--pth', default='./data/cells/checkpoints/CP60.pth', help='pth directory')
-
-    # parser.add_option('--frz', action='store_true', default=False, help='flip rotate zoom')
-    # parser.add_option('--gamma', action='store_true', default=False, help='gamma correction')
-    # parser.add_option('--deform', action='store_true', default=False, help='deformation')
+    parser.add_option('--pth', default='CP10.pth', help='pth')
 
     (options, args) = parser.parse_args()
     return options
 
-def showSample(img, mask, out, epoch, train):
+def showSample(img, mask, out, epoch, sample_dir, train):
+    img = img.cpu().detach().numpy()
     img_input = np.copy(img)
     mask = np.tile(mask, 3)
     img_input[mask<1] = 0
@@ -117,9 +116,9 @@ def showSample(img, mask, out, epoch, train):
     plt.subplot(1, 3, 3)
     plt.imshow(out.cpu().detach().numpy())
     if train:
-        plt.savefig('./samples/train'+str(epoch)+'.png')
+        plt.savefig(os.path.join(sample_dir,'train'+str(epoch)+'.png'))
     else:
-        plt.savefig('./samples/test'+str(epoch)+'.png')
+        plt.savefig(os.path.join(sample_dir,'test'+str(epoch)+'.png'))
 
 
     # fig = plt.figure()
@@ -142,21 +141,17 @@ if __name__ == '__main__':
         net.cuda()
         cudnn.benchmark = True
 
+    if not os.path.exists(args.sample_dir):
+        os.makedirs(args.sample_dir)
+
+    if not os.path.exists(args.cpt_dir):
+        os.makedirs(args.cpt_dir)
+
     trainNet(net=net,
         data_dir=args.data_dir,
+        sample_dir=args.sample_dir,
+        cpt_dir=args.cpt_dir,
         epochs=args.epochs,
         gpu=args.gpu,
         train=args.test,
-        pth_dir=args.pth)
-        # flip=args.frz,
-        # rotate=args.frz,
-        # zoom=args.frz,
-        # gamma_c=args.gamma,
-        # deform=args.deform)
-
-
-## visualize some data
-# _, (img, mask) = next(enumerate(train_data_loader))
-# nd_img = img.cpu().numpy()
-# nd_mask = mask.cpu().numpy()
-# showSample(nd_img, nd_mask)
+        pth=args.pth)
