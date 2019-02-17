@@ -57,10 +57,10 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
                 
             print('Epoch %d finished! - Loss: %.6f' % (epoch+1, epoch_loss / (i+1)))
 
-            idx = random.randint(0, 15) # batch size -1
-            showSample(img[idx], mask[idx], torch.transpose(out, 1, 3)[idx], (epoch+1), sample_dir, train=True)
-
             if (epoch+1) == 1 or (epoch+1) == 5 or (epoch+1) == 10 or (epoch+1) == 50 or (epoch+1) == 100:
+                idx = random.randint(0, 15) # batch size -1
+                showSample(img[idx], mask[idx], torch.transpose(out, 1, 3)[idx], (epoch+1), sample_dir, train=True)
+                
                 torch.save(net.state_dict(), os.path.join(cpt_dir, 'CP%d.pth' % (epoch + 1)))
                 print('Checkpoint %d saved !' % (epoch + 1))
 
