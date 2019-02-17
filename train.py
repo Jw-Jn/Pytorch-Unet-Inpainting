@@ -60,7 +60,7 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
             idx = random.randint(0, 15) # batch size -1
             showSample(img[idx], mask[idx], torch.transpose(out, 1, 3)[idx], (epoch+1), sample_dir, train=True)
 
-            if (epoch+1)%10 == 0:
+            if (epoch+1) == 1 or (epoch+1) == 5 or (epoch+1) == 10 or (epoch+1) == 50 or (epoch+1) == 100:
                 torch.save(net.state_dict(), os.path.join(cpt_dir, 'CP%d.pth' % (epoch + 1)))
                 print('Checkpoint %d saved !' % (epoch + 1))
 
@@ -104,33 +104,23 @@ def getArgs():
     return options
 
 def showSample(img, mask, out, epoch, sample_dir, train):
+    t = 'train'
+    if not train:
+        t = 'test'
+
     img = img.cpu().detach().numpy()
     img_input = np.copy(img)
     mask = np.tile(mask, 3)
     img_input[mask<1] = 0
 
-    plt.subplot(1, 3, 1)
+    plt.subplot(1, 3, 1).set_title(str(epoch)+'_'+t+'_gt')
     plt.imshow(img)
-    plt.subplot(1, 3, 2)
+    plt.subplot(1, 3, 2).set_title(str(epoch)+'_'+t+'_in')
     plt.imshow(img_input)
-    plt.subplot(1, 3, 3)
+    plt.subplot(1, 3, 3).set_title(str(epoch)+'_'+t+'_out')
     plt.imshow(out.cpu().detach().numpy())
-    if train:
-        plt.savefig(os.path.join(sample_dir,'train'+str(epoch)+'.png'))
-    else:
-        plt.savefig(os.path.join(sample_dir,'test'+str(epoch)+'.png'))
 
-
-    # fig = plt.figure()
-    # ax1 = fig.add_subplot(131)
-    # ax2 = fig.add_subplot(132)
-    # ax3 = fig.add_subplot(133)
-    # ax1.title.set_text(str(epoch)+'_'+'train'+'_'+'gt')
-    # ax2.title.set_text(str(epoch)+'_'+'train'+'_'+'gt')
-    # ax3.title.set_text(str(epoch)+'_'+'train'+'_'+'gt')
-    # # plt.show()
-    # plt.savefig('./samples/train'+str(epoch)+'.png')
-
+    plt.savefig(os.path.join(sample_dir,str(epoch)+'_'+t+'.png'))
 
 if __name__ == '__main__':
     args = getArgs()
