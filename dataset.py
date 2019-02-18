@@ -11,11 +11,12 @@ from PIL import Image
 
 class InpaintingDataSet(Dataset):
 
-    def __init__(self, img_path, crop_num):
+    def __init__(self, img_path, crop_num, train=True):
         
         self.img_path = img_path
         self.crop_size = 200
         self.img_patches = self.generatePatches(crop_num, self.crop_size)
+        self.train = train
 
     def __len__(self):
         return len(self.img_patches)
@@ -26,11 +27,12 @@ class InpaintingDataSet(Dataset):
         # img_origin = img
 
         # data augmentation
-        img = self.randomFlip(img)
-        img = self.randomRotate(img)
-        img = self.randomResize(img)
-        img = self.randomCrop(img)
-        img = self.colorJitter(img)
+        if self.train:
+            img = self.randomFlip(img)
+            img = self.randomRotate(img)
+            img = self.randomResize(img)
+            img = self.randomCrop(img)
+            img = self.colorJitter(img)
 
         resize = transforms.Resize((128, 128))
         img = resize(img)

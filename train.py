@@ -65,14 +65,14 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
                 print('Checkpoint %d saved !' % (epoch + 1))
 
     else:
-        test_dataset = dataset.InpaintingDataSet(os.path.join(data_dir, 'test.png'), 10)
+        test_dataset = dataset.InpaintingDataSet(os.path.join(data_dir, 'test.png'), 10, train=False)
         test_data_loader = torch.utils.data.DataLoader(test_dataset,
                                                     batch_size=1,
                                                     shuffle=False,
                                                     num_workers=0)
         print('test items:', len(test_dataset))
 
-        print('Testing')
+        print('Testing', pth)
         net.load_state_dict(torch.load(os.path.join(cpt_dir, pth)))
         net.eval()
 
@@ -87,7 +87,7 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
 
                 out = net.forward(img_input)
 
-                showSample(img[0], mask[0], torch.transpose(out, 1, 3)[0], cpt_dir[2:-4], sample_dir, train=False)
+                showSample(img[0], mask[0], torch.transpose(out, 1, 3)[0], pth[2:-4], sample_dir, train=False)
 
 
 def getArgs():
