@@ -87,7 +87,7 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
 
                 out = net.forward(img_input)
 
-                showSample(img[0], mask[0], torch.transpose(out, 1, 3)[0], i, sample_dir, train=False)
+                showSample(img[0], mask[0], torch.transpose(out, 1, 3)[0], cpt_dir[2:-4], sample_dir, train=False)
 
 
 def getArgs():
