@@ -22,7 +22,7 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
         train_dataset = dataset.InpaintingDataSet(os.path.join(data_dir, 'train.png'), 1600)
         train_data_loader = torch.utils.data.DataLoader(train_dataset,
                                                         batch_size=16,
-                                                        shuffle=False,
+                                                        shuffle=True,
                                                         num_workers=0)
         print('train items:', len(train_dataset))
 
@@ -33,20 +33,23 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
 
             epoch_loss = 0
 
-            for i, (img, mask) in enumerate(train_data_loader):
+            for i, (inputs, targets) in enumerate(train_data_loader):
             
                 optimizer.zero_grad()
 
-                img_input = torch.cat([img, mask], dim=-1)
-                img_input = torch.transpose(img_input, 1, 3)
+                inputs_in = torch.transpose(inputs, 1, 3)
 
                 if gpu:
-                    img_input = Variable(img_input.cuda())
-                    img = Variable(img.cuda())
+                    inputs_in = Variable(inputs_in.cuda())
+                    targets_in = Variable(targets.cuda())
 
-                out = net.forward(img_input)
+                else:
+                    inputs_in = Variable(inputs_in)
+                    targets_in = Variable(targets)
 
-                loss = criterion(out, torch.transpose(img, 1, 3))
+                out = net.forward(inputs_in)
+
+                loss = criterion(out, torch.transpose(targets_in, 1, 3))
 
                 epoch_loss += loss.item()
                 
@@ -58,8 +61,7 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
             print('Epoch %d finished! - Loss: %.6f' % (epoch+1, epoch_loss / (i+1)))
 
             if (epoch+1) == 1 or (epoch+1) == 5 or (epoch+1) == 10 or (epoch+1) == 50 or (epoch+1) == 100:
-                idx = random.randint(0, 15) # batch size -1
-                showSample(img[idx], mask[idx], torch.transpose(out, 1, 3)[idx], (epoch+1), sample_dir, train=True)
+                showSample(inputs[0], targets[0], torch.transpose(out, 1, 3)[0], (epoch+1), sample_dir, train=True)
 
                 torch.save(net.state_dict(), os.path.join(cpt_dir, 'CP%d.pth' % (epoch + 1)))
                 print('Checkpoint %d saved !' % (epoch + 1))
@@ -77,17 +79,18 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
         net.eval()
 
         with torch.no_grad():
-            for i, (img, mask) in enumerate(test_data_loader):
+            for i, (inputs, targets) in enumerate(test_data_loader):
 
-                img_input = torch.cat([img, mask], dim=-1)
-                img_input = torch.transpose(img_input, 1, 3)
+                inputs_in = torch.transpose(inputs, 1, 3)
 
                 if gpu:
-                    img_input = Variable(img_input.cuda())
+                    inputs_in = Variable(inputs_in.cuda())
+                else:
+                    inputs_in = Variable(inputs_in)
 
-                out = net.forward(img_input)
+                out = net.forward(inputs_in)
 
-                showSample(img[0], mask[0], torch.transpose(out, 1, 3)[0], pth[2:-4], sample_dir, train=False)
+                showSample(inputs[0], targets[0], torch.transpose(out, 1, 3)[0], pth[2:-4], sample_dir, train=False)
 
 
 def getArgs():
@@ -103,20 +106,15 @@ def getArgs():
     (options, args) = parser.parse_args()
     return options
 
-def showSample(img, mask, out, epoch, sample_dir, train):
+def showSample(input, target, out, epoch, sample_dir, train):
     t = 'train'
     if not train:
         t = 'test'
 
-    img = img.cpu().detach().numpy()
-    img_input = np.copy(img)
-    mask = np.tile(mask, 3)
-    img_input[mask<1] = 0
-
     plt.subplot(1, 3, 1).set_title(str(epoch)+'_'+t+'_gt')
-    plt.imshow(img)
+    plt.imshow(target)
     plt.subplot(1, 3, 2).set_title(str(epoch)+'_'+t+'_in')
-    plt.imshow(img_input)
+    plt.imshow(input[:,:,0:3])
     plt.subplot(1, 3, 3).set_title(str(epoch)+'_'+t+'_out')
     plt.imshow(out.cpu().detach().numpy())
 

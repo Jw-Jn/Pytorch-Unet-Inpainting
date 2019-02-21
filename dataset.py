@@ -24,15 +24,11 @@ class InpaintingDataSet(Dataset):
     def __getitem__(self, idx):
         img = self.img_patches[idx]
 
-        # img_origin = img
+        img_origin = img
 
         # data augmentation
         if self.train:
-            img = self.randomFlip(img)
-            img = self.randomRotate(img)
-            img = self.randomResize(img)
-            img = self.randomCrop(img)
-            img = self.colorJitter(img)
+            img = self.dataAugment(img)
 
         resize = transforms.Resize((128, 128))
         img = resize(img)
@@ -40,7 +36,8 @@ class InpaintingDataSet(Dataset):
         mask = self.generateMask(img)
 
         img = np.array(img, dtype=np.float) / 255.0
-        # img_origin = np.array(img_origin, dtype=np.float) / 255.0
+
+        img_origin = np.array(img_origin, dtype=np.float) / 255.0
 
         ########## for test ##############
         # plt.subplot(1, 3, 1)
@@ -51,10 +48,15 @@ class InpaintingDataSet(Dataset):
         # plt.imshow(mask*255)
         # plt.show()
 
-        img_tensor = torch.from_numpy(img).float()
-        # mask_tensor = torch.from_numpy(mask).float()
+        target_tensor = torch.from_numpy(img).float()
 
-        return img_tensor, mask
+        img_input = np.copy(img)
+        m = np.tile(mask, 3)
+        img_input[m<1] = 0
+        img_input = np.concatenate((img_input, mask), axis=-1)
+        input_tensor = torch.from_numpy(img_input).float()
+
+        return input_tensor, target_tensor
 
     
     def generateMask(self, img, hole_size=[8, 64], holes_num=5):
@@ -91,45 +93,15 @@ class InpaintingDataSet(Dataset):
 
         return patches
 
-    def randomFlip(self, img):
-        if random.random() < 0.5:
-            # print('flip')
-            if random.random() < 0.5:
-                flip = transforms.RandomVerticalFlip()
-            else:
-                flip = transforms.RandomHorizontalFlip()
+    def dataAugment(self, img):
+        w = random.randint(-50, 50)
+        h = random.randint(-50, 50)
+        tranform = transforms.Compose([
+            transforms.RandomVerticalFlip(0.5),
+            transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomRotation(180),
+            transforms.Resize((self.crop_size+w, self.crop_size+h)),
+            transforms.RandomCrop(150),
+            transforms.ColorJitter()])
 
-            img = flip(img)
-        return img
-
-    def randomRotate(self, img):
-        if random.random() < 0.5:
-            # print('rotate')
-            degree = [90, 180, -90]
-            img = transforms.functional.rotate(img, degree[random.randint(0,2)])
-            # rotate = transforms.RandomRotation(180)
-            # img = rotate(img)
-        return img
-
-    def colorJitter(self, img):
-        if random.random() < 0.5:
-            # print('cj')
-            colorJ = transforms.ColorJitter()
-            img = colorJ(img)
-        return img
-
-    def randomCrop(self, img):
-        if random.random() < 0.5:
-            # print('crop')
-            crop = transforms.RandomCrop(150)
-            img = crop(img)
-        return img
-
-    def randomResize(self, img):
-        if random.random() < 0.5:
-            # print('resize')
-            w = random.randint(-50, 50)
-            h = random.randint(-50, 50)
-            resize = transforms.Resize((self.crop_size+w, self.crop_size+h))
-            img = resize(img)
-        return img
+        return tranform(img)
