@@ -99,7 +99,7 @@ def getArgs():
     parser.add_option('--data-dir', dest='data_dir', default='./inpainting_set', help='data directory')
     parser.add_option('--sample-dir', dest='sample_dir', default='./samples', help='sample directory')
     parser.add_option('--cpt-dir', dest='cpt_dir', default='./checkpoints', help='checkpoint directory')
-    parser.add_option('--gpu', action='store_true', dest='gpu', default=True, help='use cuda')
+    parser.add_option('--gpu', action='store_true', dest='gpu', default=False, help='use cuda')
     parser.add_option('--test', action='store_false', default=True, help='testing mode')
     parser.add_option('--pth', default='CP10.pth', help='pth')
 
