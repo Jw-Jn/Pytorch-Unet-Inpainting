@@ -67,7 +67,7 @@ def trainNet(net, data_dir, sample_dir, cpt_dir, epochs=100, gpu=True, train=Tru
                 print('Checkpoint %d saved !' % (epoch + 1))
 
     else:
-        test_dataset = dataset.InpaintingDataSet(os.path.join(data_dir, 'test.png'), 10, train=False)
+        test_dataset = dataset.InpaintingDataSet(os.path.join(data_dir, 'test.png'), 5, train=False)
         test_data_loader = torch.utils.data.DataLoader(test_dataset,
                                                     batch_size=1,
                                                     shuffle=False,
@@ -101,7 +101,7 @@ def getArgs():
     parser.add_option('--cpt-dir', dest='cpt_dir', default='./checkpoints', help='checkpoint directory')
     parser.add_option('--gpu', action='store_true', dest='gpu', default=False, help='use cuda')
     parser.add_option('--test', action='store_false', default=True, help='testing mode')
-    parser.add_option('--pth', default='CP10.pth', help='pth')
+    parser.add_option('--pth', default='CP100.pth', help='pth')
 
     (options, args) = parser.parse_args()
     return options
@@ -118,7 +118,8 @@ def showSample(input, target, out, epoch, sample_dir, train):
     plt.subplot(1, 3, 3).set_title(str(epoch)+'_'+t+'_out')
     plt.imshow(out.cpu().detach().numpy())
 
-    plt.savefig(os.path.join(sample_dir,str(epoch)+'_'+t+'.png'))
+    plt.show()
+    # plt.savefig(os.path.join(sample_dir,str(epoch)+'_'+t+'.png'))
 
 if __name__ == '__main__':
     args = getArgs()
